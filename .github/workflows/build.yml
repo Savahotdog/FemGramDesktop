@@ -73,7 +73,7 @@ jobs:
 
                   if (!File.Exists(ayuExe)) {
                       var found = Directory.GetFiles(coreDir, "*.exe", SearchOption.AllDirectories);
-                      if (found.Length > 0) ayuExe = found;
+                      if (found.Length > 0) ayuExe = found[0];
                   }
 
                   if (!File.Exists(ayuExe)) {
