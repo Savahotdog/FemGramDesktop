@@ -9,12 +9,20 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Checkout repository
+      - name: Setup Build Structure & Checkout
         uses: actions/checkout@v4
         with:
+          path: tdesktop
           submodules: recursive
 
+      - name: Create ThirdParty & Libraries Folders
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "ThirdParty"
+          New-Item -ItemType Directory -Force -Path "Libraries"
+
       - name: Apply FemGram Patches
+        working-directory: tdesktop
         run: python femgram_patcher.py
 
       - name: Download Flowseal TGWS Proxy
@@ -27,19 +35,34 @@ jobs:
             Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "Release/modules/TgWsProxy_windows.exe"
           }
 
-      - name: Configure & Build
+      - name: Prepare Libraries
+        shell: cmd
         run: |
-          python Telegram/build/build.py --target win64
-        env:
-          BUILD_TARGET: win64
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          call tdesktop\Telegram\build\prepare\win.bat
+
+      - name: Configure & Build Release
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cd tdesktop\Telegram
+          call configure.bat x64 -D TDESKTOP_API_ID=2040 -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627
+          cmake --build ..\out --config Release --target Telegram --parallel
 
       - name: Package FemGram
         shell: pwsh
         run: |
-          $exePath = Get-ChildItem -Path "out" -Filter "Telegram.exe" -Recurse | Select-Object -First 1
+          $exePath = Get-ChildItem -Path "tdesktop/out" -Filter "AyuGram.exe" -Recurse | Select-Object -First 1
+          if (-not $exePath) {
+            $exePath = Get-ChildItem -Path "tdesktop/out" -Filter "Telegram.exe" -Recurse | Select-Object -First 1
+          }
           if ($exePath) {
             Copy-Item $exePath.FullName -Destination "Release/FemGram.exe"
+            Get-ChildItem -Path $exePath.DirectoryName -Filter "*.dll" | Copy-Item -Destination "Release/"
             Compress-Archive -Path "Release/*" -DestinationPath "FemGram_Windows_x64.zip"
+          } else {
+            Write-Error "Compiled executable not found!"
+            exit 1
           }
 
       - name: Upload Build Artifact
