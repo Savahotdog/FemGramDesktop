@@ -119,5 +119,19 @@ for root, _, files in os.walk("Telegram/build"):
                 print(f"[+] Fixed diffutils in {fpath}")
         except Exception:
             pass
+# 5. Skip Debug library builds to cut build time in half
+for root, _, files in os.walk("Telegram/build/prepare"):
+    for fname in files:
+        fpath = os.path.join(root, fname)
+        try:
+            with open(fpath, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            new_lines = [l for l in lines if "debug" not in l.lower() or "nodebug" in l.lower()]
+            if len(new_lines) != len(lines):
+                with open(fpath, "w", encoding="utf-8") as f:
+                    f.writelines(new_lines)
+                print(f"[+] Removed debug steps in {fpath}")
+        except Exception:
+            pass
 
 print("[*] FemGram patching completed successfully!")
