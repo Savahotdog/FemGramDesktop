@@ -12,9 +12,9 @@ jobs:
       - name: Download Latest AyuGram Desktop
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path "FemGram_Release/modules"
+          New-Item -ItemType Directory -Force -Path "FemGram_Release/modules/core"
           $ayu = Invoke-RestMethod -Uri "https://github.com"
-          $asset = $ayu.assets | Where-Object { $_.name -like "*windows*.zip" -or $_.name -like "*portable*.zip" -or $_.name -like "*x64*.zip" } | Select-Object -First 1
+          $asset = $ayu.assets | Where-Object { $_.name -like "*.zip" } | Select-Object -First 1
           Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "ayu.zip"
           Expand-Archive -Path "ayu.zip" -DestinationPath "FemGram_Release/modules/core" -Force
           Remove-Item "ayu.zip"
@@ -23,7 +23,7 @@ jobs:
         shell: pwsh
         run: |
           $proxy = Invoke-RestMethod -Uri "https://github.com"
-          $asset = $proxy.assets | Where-Object { $_.name -like "*windows*.exe" } | Select-Object -First 1
+          $asset = $proxy.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
           if ($asset) {
             Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "FemGram_Release/modules/TgWsProxy_windows.exe"
           }
