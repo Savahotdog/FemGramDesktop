@@ -1,0 +1,49 @@
+name: Build FemGram Desktop (Windows)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Apply FemGram Patches
+        run: python femgram_patcher.py
+
+      - name: Download Flowseal TGWS Proxy
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "Release/modules"
+          $release = Invoke-RestMethod -Uri "https://github.com"
+          $asset = $release.assets | Where-Object { $_.name -like "*windows*.exe" } | Select-Object -First 1
+          if ($asset) {
+            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "Release/modules/TgWsProxy_windows.exe"
+          }
+
+      - name: Configure & Build
+        run: |
+          python Telegram/build/build.py --target win64
+        env:
+          BUILD_TARGET: win64
+
+      - name: Package FemGram
+        shell: pwsh
+        run: |
+          $exePath = Get-ChildItem -Path "out" -Filter "Telegram.exe" -Recurse | Select-Object -First 1
+          if ($exePath) {
+            Copy-Item $exePath.FullName -Destination "Release/FemGram.exe"
+            Compress-Archive -Path "Release/*" -DestinationPath "FemGram_Windows_x64.zip"
+          }
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FemGram-Windows-x64
+          path: FemGram_Windows_x64.zip
