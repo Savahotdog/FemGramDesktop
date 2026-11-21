@@ -119,19 +119,23 @@ for root, _, files in os.walk("Telegram/build"):
                 print(f"[+] Fixed diffutils in {fpath}")
         except Exception:
             pass
-# 5. Skip Debug library builds to cut build time in half
+
+# 5. Fix dav1d / libvpx build issues on newer Visual Studio
 for root, _, files in os.walk("Telegram/build/prepare"):
     for fname in files:
         fpath = os.path.join(root, fname)
         try:
             with open(fpath, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-            new_lines = [l for l in lines if "debug" not in l.lower() or "nodebug" in l.lower()]
-            if len(new_lines) != len(lines):
+                txt = f.read()
+            orig = txt
+            txt = txt.replace("-Denable_asm=true", "-Denable_asm=false")
+            if txt != orig:
                 with open(fpath, "w", encoding="utf-8") as f:
-                    f.writelines(new_lines)
-                print(f"[+] Removed debug steps in {fpath}")
+                    f.write(txt)
+                print(f"[+] Patched asm flag in {fpath}")
         except Exception:
             pass
+
+print("[*] FemGram patching completed successfully!")
 
 print("[*] FemGram patching completed successfully!")
