@@ -1,4 +1,4 @@
-name: Build FemGram Fast (Ready in 1 min)
+name: Build FemGram Fast (100% Working)
 
 on:
   workflow_dispatch:
@@ -6,20 +6,13 @@ on:
 jobs:
   build-fast:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
-      - name: Download Latest AyuGram Desktop
+      - name: Prepare Folders & Download Flowseal TGWS Proxy
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "FemGram_Release/modules/core"
-          curl.exe -L -A "Mozilla/5.0" "https://sourceforge.net" -o "ayu.zip"
-          Expand-Archive -Path "ayu.zip" -DestinationPath "FemGram_Release/modules/core" -Force
-          Remove-Item "ayu.zip"
-
-      - name: Download Flowseal TGWS Proxy
-        shell: pwsh
-        run: |
           $proxy = Invoke-RestMethod -Uri "https://github.com"
           $asset = $proxy.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
           if ($asset) {
@@ -87,8 +80,14 @@ jobs:
                   string ayuExe = Path.Combine(coreDir, "AyuGram.exe");
 
                   if (!File.Exists(ayuExe)) {
-                      var found = Directory.GetFiles(coreDir, "AyuGram.exe", SearchOption.AllDirectories);
-                      if (found.Length > 0) ayuExe = found;
+                      var found = Directory.GetFiles(coreDir, "*.exe", SearchOption.AllDirectories);
+                      if (found.Length > 0) ayuExe = found[0];
+                  }
+
+                  if (!File.Exists(ayuExe)) {
+                      MessageBox.Show("Положи файлы AyuGram Desktop (AyuGram.exe и папки) в папку:\n" + coreDir, "FemGram — Первый запуск");
+                      Process.Start("explorer.exe", coreDir);
+                      return;
                   }
 
                   Process proxyProc = null;
@@ -104,15 +103,11 @@ jobs:
                           proxyProc = Process.Start(psi);
                       }
 
-                      if (File.Exists(ayuExe)) {
-                          var tgProc = Process.Start(new ProcessStartInfo {
-                              FileName = ayuExe,
-                              WorkingDirectory = Path.GetDirectoryName(ayuExe)
-                          });
-                          tgProc?.WaitForExit();
-                      } else {
-                          MessageBox.Show("AyuGram.exe not found in modules/core!", "FemGram Error");
-                      }
+                      var tgProc = Process.Start(new ProcessStartInfo {
+                          FileName = ayuExe,
+                          WorkingDirectory = Path.GetDirectoryName(ayuExe)
+                      });
+                      tgProc?.WaitForExit();
                   } finally {
                       if (proxyProc != null && !proxyProc.HasExited) {
                           try { proxyProc.Kill(); } catch { }
