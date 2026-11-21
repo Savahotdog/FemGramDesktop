@@ -1,4 +1,4 @@
-name: Build FemGram Fast (100% Working)
+name: Build FemGram Fast (5 Seconds)
 
 on:
   workflow_dispatch:
@@ -6,22 +6,13 @@ on:
 jobs:
   build-fast:
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
-      - name: Prepare Folders & Download Flowseal TGWS Proxy
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path "FemGram_Release/modules/core"
-          $proxy = Invoke-RestMethod -Uri "https://github.com"
-          $asset = $proxy.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
-          if ($asset) {
-            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "FemGram_Release/modules/TgWsProxy_windows.exe"
-          }
-
       - name: Create Femboy Pastel Pink Theme
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force -Path "FemGram_Release/modules/core"
           $theme = @"
           windowBg: #fff0f6;
           windowFg: #4a154b;
@@ -75,18 +66,19 @@ jobs:
               [STAThread]
               static void Main() {
                   string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                  string proxyPath = Path.Combine(baseDir, "modules", "TgWsProxy_windows.exe");
-                  string coreDir = Path.Combine(baseDir, "modules", "core");
+                  string modulesDir = Path.Combine(baseDir, "modules");
+                  string coreDir = Path.Combine(modulesDir, "core");
+                  string proxyPath = Path.Combine(modulesDir, "TgWsProxy_windows.exe");
                   string ayuExe = Path.Combine(coreDir, "AyuGram.exe");
 
                   if (!File.Exists(ayuExe)) {
                       var found = Directory.GetFiles(coreDir, "*.exe", SearchOption.AllDirectories);
-                      if (found.Length > 0) ayuExe = found[0];
+                      if (found.Length > 0) ayuExe = found;
                   }
 
                   if (!File.Exists(ayuExe)) {
-                      MessageBox.Show("Положи файлы AyuGram Desktop (AyuGram.exe и папки) в папку:\n" + coreDir, "FemGram — Первый запуск");
-                      Process.Start("explorer.exe", coreDir);
+                      MessageBox.Show("1. Положи AyuGram.exe в папку: modules\\core\\\n2. Положи TgWsProxy_windows.exe в папку: modules\\", "FemGram — Первый запуск");
+                      Process.Start("explorer.exe", modulesDir);
                       return;
                   }
 
@@ -107,7 +99,7 @@ jobs:
                           FileName = ayuExe,
                           WorkingDirectory = Path.GetDirectoryName(ayuExe)
                       });
-                      tgProc?.WaitForExit();
+                      if (tgProc != null) tgProc.WaitForExit();
                   } finally {
                       if (proxyProc != null && !proxyProc.HasExited) {
                           try { proxyProc.Kill(); } catch { }
