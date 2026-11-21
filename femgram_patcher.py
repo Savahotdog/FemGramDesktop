@@ -105,5 +105,19 @@ patch_file(theme_path, [
     ("historyPeer2NameFg: #4fad2d;", "historyPeer2NameFg: #ae3ec9;"),
     ("historyPeer4NameFg: #168acd;", "historyPeer4NameFg: #f06595;")
 ])
+# 4. Fix MSYS2 diffutils package name in build scripts
+for root, _, files in os.walk("Telegram/build"):
+    for fname in files:
+        fpath = os.path.join(root, fname)
+        try:
+            with open(fpath, "r", encoding="utf-8") as f:
+                txt = f.read()
+            if "mingw-w64-x86_64-diffutils" in txt:
+                txt = txt.replace("mingw-w64-x86_64-diffutils", "diffutils")
+                with open(fpath, "w", encoding="utf-8") as f:
+                    f.write(txt)
+                print(f"[+] Fixed diffutils in {fpath}")
+        except Exception:
+            pass
 
 print("[*] FemGram patching completed successfully!")
