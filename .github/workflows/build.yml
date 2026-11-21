@@ -13,9 +13,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "FemGram_Release/modules/core"
-          $ayu = Invoke-RestMethod -Uri "https://github.com"
-          $asset = $ayu.assets | Where-Object { $_.name -like "*.zip" } | Select-Object -First 1
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "ayu.zip"
+          curl.exe -L -A "Mozilla/5.0" "https://sourceforge.net" -o "ayu.zip"
           Expand-Archive -Path "ayu.zip" -DestinationPath "FemGram_Release/modules/core" -Force
           Remove-Item "ayu.zip"
 
@@ -90,7 +88,7 @@ jobs:
 
                   if (!File.Exists(ayuExe)) {
                       var found = Directory.GetFiles(coreDir, "AyuGram.exe", SearchOption.AllDirectories);
-                      if (found.Length > 0) ayuExe = found[0];
+                      if (found.Length > 0) ayuExe = found;
                   }
 
                   Process proxyProc = null;
