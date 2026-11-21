@@ -1,85 +1,134 @@
-name: Build FemGram Desktop (Windows)
+name: Build FemGram Fast (Ready in 1 min)
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build-fast:
     runs-on: windows-latest
-    timeout-minutes: 360
+    timeout-minutes: 15
 
     steps:
-      - name: Setup Build Structure & Checkout
-        uses: actions/checkout@v4
-        with:
-          path: tdesktop
-          submodules: recursive
-
-      - name: Cache Compiled Libraries
-        id: cache-libs
-        uses: actions/cache@v4
-        with:
-          path: |
-            ThirdParty
-            Libraries
-          key: win64-libs-v3-${{ hashFiles('tdesktop/Telegram/build/prepare/**') }}
-
-      - name: Create ThirdParty & Libraries Folders
-        if: steps.cache-libs.outputs.cache-hit != 'true'
+      - name: Download Latest AyuGram Desktop
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path "ThirdParty"
-          New-Item -ItemType Directory -Force -Path "Libraries"
-
-      - name: Apply FemGram Patches
-        working-directory: tdesktop
-        run: python femgram_patcher.py
+          New-Item -ItemType Directory -Force -Path "FemGram_Release/modules"
+          $ayu = Invoke-RestMethod -Uri "https://github.com"
+          $asset = $ayu.assets | Where-Object { $_.name -like "*windows*.zip" -or $_.name -like "*portable*.zip" -or $_.name -like "*x64*.zip" } | Select-Object -First 1
+          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "ayu.zip"
+          Expand-Archive -Path "ayu.zip" -DestinationPath "FemGram_Release/modules/core" -Force
+          Remove-Item "ayu.zip"
 
       - name: Download Flowseal TGWS Proxy
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path "Release/modules"
-          $release = Invoke-RestMethod -Uri "https://github.com"
-          $asset = $release.assets | Where-Object { $_.name -like "*windows*.exe" } | Select-Object -First 1
+          $proxy = Invoke-RestMethod -Uri "https://github.com"
+          $asset = $proxy.assets | Where-Object { $_.name -like "*windows*.exe" } | Select-Object -First 1
           if ($asset) {
-            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "Release/modules/TgWsProxy_windows.exe"
+            Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "FemGram_Release/modules/TgWsProxy_windows.exe"
           }
 
-      - name: Prepare Libraries
-        if: steps.cache-libs.outputs.cache-hit != 'true'
-        shell: cmd
-        run: |
-          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set VS_PATH=%%i
-          call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
-          call tdesktop\Telegram\build\prepare\win.bat
-
-      - name: Configure & Build Release
-        shell: cmd
-        run: |
-          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set VS_PATH=%%i
-          call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
-          cd tdesktop\Telegram
-          call configure.bat x64 -D TDESKTOP_API_ID=2040 -D TDESKTOP_API_HASH=b18441a1ff607e10a989891a5462e627
-          cmake --build ..\out --config Release --target Telegram --parallel
-
-      - name: Package FemGram
+      - name: Create Femboy Pastel Pink Theme
         shell: pwsh
         run: |
-          $exePath = Get-ChildItem -Path "tdesktop/out" -Filter "AyuGram.exe" -Recurse | Select-Object -First 1
-          if (-not $exePath) {
-            $exePath = Get-ChildItem -Path "tdesktop/out" -Filter "Telegram.exe" -Recurse | Select-Object -First 1
-          }
-          if ($exePath) {
-            Copy-Item $exePath.FullName -Destination "Release/FemGram.exe"
-            Get-ChildItem -Path $exePath.DirectoryName -Filter "*.dll" | Copy-Item -Destination "Release/"
-            Compress-Archive -Path "Release/*" -DestinationPath "FemGram_Windows_x64.zip"
-          } else {
-            Write-Error "Compiled executable not found!"
-            exit 1
-          }
+          $theme = @"
+          windowBg: #fff0f6;
+          windowFg: #4a154b;
+          windowBgOver: #ffdeeb;
+          windowBgRipple: #fcc2d7;
+          windowFgOver: #4a154b;
+          windowSubTextFg: #862e9c;
+          windowSubTextFgOver: #ae3ec9;
+          windowBoldFg: #d6336c;
+          windowBoldFgOver: #c2255c;
+          windowBgActive: #f06595;
+          windowFgActive: #ffffff;
+          activeButtonBg: #f06595;
+          activeButtonBgOver: #e64980;
+          activeButtonBgRipple: #d6336c;
+          activeButtonFg: #ffffff;
+          activeButtonFgOver: #ffffff;
+          lightButtonBg: #fff0f6;
+          lightButtonBgOver: #ffdeeb;
+          lightButtonBgRipple: #fcc2d7;
+          lightButtonFg: #d6336c;
+          lightButtonFgOver: #c2255c;
+          msgOutBg: #ffdeeb;
+          msgOutBgSelected: #fcc2d7;
+          msgInBg: #f8f0fc;
+          msgInBgSelected: #f3d9fa;
+          msgServiceBg: #f06595aa;
+          msgServiceFg: #ffffff;
+          historyPeer1NameFg: #d6336c;
+          historyPeer2NameFg: #ae3ec9;
+          historyPeer4NameFg: #f06595;
+          dialogsBg: #fff0f6;
+          dialogsBgOver: #ffdeeb;
+          dialogsBgActive: #f06595;
+          dialogsNameFg: #4a154b;
+          dialogsTextFg: #862e9c;
+          dialogsDateFg: #ae3ec9;
+          "@
+          Set-Content -Path "FemGram_Release/Femboy_Pastel_Pink.tdesktop-theme" -Value $theme -Encoding UTF8
 
-      - name: Upload Build Artifact
+      - name: Compile Native FemGram Launcher
+        shell: pwsh
+        run: |
+          $code = @"
+          using System;
+          using System.Diagnostics;
+          using System.IO;
+          using System.Windows.Forms;
+
+          class Program {
+              [STAThread]
+              static void Main() {
+                  string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                  string proxyPath = Path.Combine(baseDir, "modules", "TgWsProxy_windows.exe");
+                  string coreDir = Path.Combine(baseDir, "modules", "core");
+                  string ayuExe = Path.Combine(coreDir, "AyuGram.exe");
+
+                  if (!File.Exists(ayuExe)) {
+                      var found = Directory.GetFiles(coreDir, "AyuGram.exe", SearchOption.AllDirectories);
+                      if (found.Length > 0) ayuExe = found[0];
+                  }
+
+                  Process proxyProc = null;
+                  try {
+                      if (File.Exists(proxyPath)) {
+                          var psi = new ProcessStartInfo {
+                              FileName = proxyPath,
+                              Arguments = "--port 1443 --secret 0123456789abcdef0123456789abcdef",
+                              UseShellExecute = false,
+                              CreateNoWindow = true,
+                              WindowStyle = ProcessWindowStyle.Hidden
+                          };
+                          proxyProc = Process.Start(psi);
+                      }
+
+                      if (File.Exists(ayuExe)) {
+                          var tgProc = Process.Start(new ProcessStartInfo {
+                              FileName = ayuExe,
+                              WorkingDirectory = Path.GetDirectoryName(ayuExe)
+                          });
+                          tgProc?.WaitForExit();
+                      } else {
+                          MessageBox.Show("AyuGram.exe not found in modules/core!", "FemGram Error");
+                      }
+                  } finally {
+                      if (proxyProc != null && !proxyProc.HasExited) {
+                          try { proxyProc.Kill(); } catch { }
+                      }
+                  }
+              }
+          }
+          "@
+          Set-Content -Path "launcher.cs" -Value $code -Encoding UTF8
+          & "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /out:"FemGram_Release/FemGram.exe" /reference:System.Windows.Forms.dll launcher.cs
+          Compress-Archive -Path "FemGram_Release/*" -DestinationPath "FemGram_Fast_Windows.zip"
+
+      - name: Upload Ready FemGram Build
         uses: actions/upload-artifact@v4
         with:
-          name: FemGram-Windows-x64
-          path: FemGram_Windows_x64.zip
+          name: FemGram-Fast-Windows
+          path: FemGram_Fast_Windows.zip
